@@ -3,6 +3,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="color-scheme" content="dark">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PAPER TRADING · AUTO BOT</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -15,14 +16,14 @@
   --text:#b0c8e0;--text2:#506070;--text3:#253545;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:100vh;}
+body{background:#03060a !important;background-color:#03060a !important;color:#b0c8e0;font-family:'Space Mono',monospace;min-height:100vh;}
 .bg{position:fixed;inset:0;pointer-events:none;z-index:0;}
 .bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:50px 50px;}
 .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 16px 80px;}
 
 /* HEADER */
-header{padding:18px 0 14px;border-bottom:1px solid var(–border);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-.logo{font-family:‘Orbitron’,monospace;font-weight:900;font-size:16px;letter-spacing:4px;background:linear-gradient(135deg,var(–green),var(–accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+header{padding:14px 0 12px;border-bottom:1px solid var(–border);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.logo{font-family:‘Orbitron’,monospace;font-weight:900;font-size:16px;letter-spacing:4px;color:var(–green);}
 .logo-sub{font-size:8px;letter-spacing:3px;color:var(–text2);margin-top:2px;}
 .hdr-right{display:flex;align-items:center;gap:10px;}
 .live{display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.05);font-size:9px;letter-spacing:2px;color:var(–green);}
@@ -53,11 +54,12 @@ header{padding:18px 0 14px;border-bottom:1px solid var(–border);margin-bottom:
 .settings-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .setting-box{flex:1;min-width:120px;padding:10px 12px;border:1px solid var(–border2);background:var(–surface);}
 .setting-label{font-size:8px;letter-spacing:2px;color:var(–text2);margin-bottom:5px;}
-.setting-input{width:100%;background:var(–surface2);border:1px solid var(–border2);color:var(–text);font-family:‘Space Mono’,monospace;font-size:12px;padding:5px 8px;outline:none;}
-.setting-input:focus{border-color:var(–accent);}
+.setting-input{width:100%;background:#0c1420 !important;border:1px solid var(–border2) !important;color:#b0c8e0 !important;font-family:‘Space Mono’,monospace;font-size:13px;padding:8px 10px;outline:none;-webkit-appearance:none;border-radius:0 !important;-webkit-text-fill-color:#b0c8e0 !important;}
+.setting-input:focus{border-color:var(–accent) !important;outline:none;}
+select.setting-input{background:#0c1420 !important;color:#b0c8e0 !important;-webkit-text-fill-color:#b0c8e0 !important;}
 
 /* STATUS */
-#botStatus{padding:10px 14px;border:1px solid var(–border2);background:var(–surface);margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:10px;letter-spacing:1px;}
+#botStatus{padding:12px 14px;border:1px solid var(–border2);background:#080d14;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:1px;color:#b0c8e0;}
 .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .status-dot.running{background:var(–green);box-shadow:0 0 8px var(–green);animation:blink 1s infinite;}
 .status-dot.stopped{background:var(–text2);}
@@ -114,9 +116,11 @@ header{padding:18px 0 14px;border-bottom:1px solid var(–border);margin-bottom:
 @media(max-width:600px){
 .balance-panel{grid-template-columns:1fr 1fr;}
 .stats-grid{grid-template-columns:1fr 1fr;}
-.trade-row{grid-template-columns:60px 70px 55px 65px 65px 65px 1fr;font-size:9px;}
+.trade-row{grid-template-columns:60px 55px 60px 60px 60px 55px 1fr;font-size:9px;gap:4px;padding:7px 8px;}
 .active-trade{grid-template-columns:auto 1fr auto;}
 .close-trade-btn{grid-column:1/-1;width:100%;}
+.settings-row{flex-direction:column;}
+.setting-box{min-width:unset;}
 }
 </style>
 
@@ -128,7 +132,7 @@ header{padding:18px 0 14px;border-bottom:1px solid var(–border);margin-bottom:
 <header>
   <div>
     <div class="logo">PAPER TRADING BOT</div>
-    <div class="logo-sub">ВИРТУАЛЬНЫЕ СДЕЛКИ · РЕАЛЬНЫЕ ЦЕНЫ BINANCE · СТАТИСТИКА</div>
+    <div class="logo-sub" style="display:none">PAPER TRADING</div>
   </div>
   <div class="hdr-right">
     <span style="font-size:10px;color:var(--text2)" id="clock">--:--:--</span>
@@ -189,10 +193,10 @@ header{padding:18px 0 14px;border-bottom:1px solid var(–border);margin-bottom:
 
 <!-- CONTROLS -->
 
-<div class="bot-controls triple">
-  <button class="ctrl-btn start" id="startBtn" onclick="startBot()">▶ ЗАПУСТИТЬ</button>
-  <button class="ctrl-btn stop" id="stopBtn" onclick="stopBot()" disabled>■ ОСТАНОВИТЬ</button>
-  <button class="ctrl-btn reset" onclick="resetBot()">↺ СБРОС</button>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+  <button style="font-family:'Orbitron',monospace;font-weight:700;font-size:10px;letter-spacing:2px;padding:16px 8px;border:2px solid var(--green);background:rgba(0,255,136,.08);color:var(--green);cursor:pointer;-webkit-appearance:none;border-radius:0;" id="startBtn" onclick="startBot()">▶ СТАРТ</button>
+  <button style="font-family:'Orbitron',monospace;font-weight:700;font-size:10px;letter-spacing:2px;padding:16px 8px;border:2px solid var(--red);background:rgba(255,45,85,.08);color:var(--red);cursor:pointer;-webkit-appearance:none;border-radius:0;opacity:0.4;" id="stopBtn" onclick="stopBot()">■ СТОП</button>
+  <button style="font-family:'Orbitron',monospace;font-weight:700;font-size:10px;letter-spacing:2px;padding:16px 8px;border:2px solid var(--yellow);background:rgba(255,204,0,.08);color:var(--yellow);cursor:pointer;-webkit-appearance:none;border-radius:0;" id="resetBtn" onclick="resetBot()">↺ СБРОС</button>
 </div>
 
 <!-- STATUS -->
@@ -578,9 +582,10 @@ state.startBalance=startBal;
 state.equityHistory=[startBal];
 }
 botRunning=true;
-document.getElementById(‘startBtn’).disabled=true;
-document.getElementById(‘stopBtn’).disabled=false;
-document.getElementById(‘startBtn’).classList.add(‘active’);
+document.getElementById(‘startBtn’).style.opacity=‘0.4’;
+document.getElementById(‘startBtn’).style.pointerEvents=‘none’;
+document.getElementById(‘stopBtn’).style.opacity=‘1’;
+document.getElementById(‘stopBtn’).style.pointerEvents=‘auto’;
 addLog(‘🤖 Бот запущен. Сканирование рынка…’,‘info’);
 setStatus(‘running’,‘🤖 Бот запущен’);
 runScan();
@@ -600,9 +605,10 @@ function stopBot(){
 botRunning=false;
 clearInterval(botTimer);clearInterval(priceTimer);
 botTimer=null;priceTimer=null;
-document.getElementById(‘startBtn’).disabled=false;
-document.getElementById(‘stopBtn’).disabled=true;
-document.getElementById(‘startBtn’).classList.remove(‘active’);
+document.getElementById(‘startBtn’).style.opacity=‘1’;
+document.getElementById(‘startBtn’).style.pointerEvents=‘auto’;
+document.getElementById(‘stopBtn’).style.opacity=‘0.4’;
+document.getElementById(‘stopBtn’).style.pointerEvents=‘none’;
 setStatus(‘stopped’,‘⏹ Бот остановлен’);
 addLog(‘⏹ Бот остановлен’,‘warn’);
 saveState();renderAll();
