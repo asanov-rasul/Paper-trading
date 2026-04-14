@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAPER TRADING · AUTO BOT</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#03060a;--surface:#080d14;--surface2:#0c1420;
+  --border:#0f2035;--border2:#1a3550;
+  --accent:#00e5ff;--accent2:#0080ff;
+  --green:#00ff88;--red:#ff2d55;--yellow:#ffcc00;--purple:#a855f7;--orange:#ff9500;
+  --text:#b0c8e0;--text2:#506070;--text3:#253545;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:100vh;}
+.bg{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:50px 50px;}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 16px 80px;}
+
+/* HEADER */
+header{padding:18px 0 14px;border-bottom:1px solid var(–border);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo{font-family:‘Orbitron’,monospace;font-weight:900;font-size:16px;letter-spacing:4px;background:linear-gradient(135deg,var(–green),var(–accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-sub{font-size:8px;letter-spacing:3px;color:var(–text2);margin-top:2px;}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.live{display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.05);font-size:9px;letter-spacing:2px;color:var(–green);}
+.pdot{width:5px;height:5px;border-radius:50%;background:var(–green);animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* BALANCE PANEL */
+.balance-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(–border);border:1px solid var(–border2);margin-bottom:14px;}
+.bal-cell{background:var(–surface);padding:14px 16px;text-align:center;}
+.bal-label{font-size:8px;letter-spacing:3px;color:var(–text2);margin-bottom:6px;}
+.bal-value{font-family:‘Orbitron’,monospace;font-weight:700;font-size:18px;}
+.bal-sub{font-size:9px;color:var(–text2);margin-top:3px;}
+
+/* CONTROLS */
+.bot-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.bot-controls.triple{grid-template-columns:1fr 1fr 1fr;}
+.ctrl-btn{font-family:‘Orbitron’,monospace;font-weight:700;font-size:10px;letter-spacing:3px;padding:13px;border:1px solid;background:transparent;cursor:pointer;transition:all .25s;-webkit-tap-highlight-color:transparent;}
+.ctrl-btn.start{color:var(–green);border-color:var(–green);}
+.ctrl-btn.start:hover,
+.ctrl-btn.start.active{background:rgba(0,255,136,.1);box-shadow:0 0 20px rgba(0,255,136,.2);}
+.ctrl-btn.stop{color:var(–red);border-color:var(–red);}
+.ctrl-btn.stop:hover{background:rgba(255,45,85,.08);}
+.ctrl-btn.reset{color:var(–yellow);border-color:var(–yellow);}
+.ctrl-btn.reset:hover{background:rgba(255,204,0,.08);}
+.ctrl-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* SETTINGS */
+.settings-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.setting-box{flex:1;min-width:120px;padding:10px 12px;border:1px solid var(–border2);background:var(–surface);}
+.setting-label{font-size:8px;letter-spacing:2px;color:var(–text2);margin-bottom:5px;}
+.setting-input{width:100%;background:var(–surface2);border:1px solid var(–border2);color:var(–text);font-family:‘Space Mono’,monospace;font-size:12px;padding:5px 8px;outline:none;}
+.setting-input:focus{border-color:var(–accent);}
+
+/* STATUS */
+#botStatus{padding:10px 14px;border:1px solid var(–border2);background:var(–surface);margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:10px;letter-spacing:1px;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-dot.running{background:var(–green);box-shadow:0 0 8px var(–green);animation:blink 1s infinite;}
+.status-dot.stopped{background:var(–text2);}
+.status-dot.scanning{background:var(–yellow);animation:blink .5s infinite;}
+
+/* ACTIVE TRADES */
+.sec-label{font-size:9px;letter-spacing:4px;color:var(–text2);margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:’’;flex:1;height:1px;background:var(–border);}
+.active-trade{border:1px solid var(–border2);background:var(–surface);padding:12px 14px;margin-bottom:6px;display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;}
+.active-trade.long-t{border-left:3px solid var(–green);}
+.active-trade.short-t{border-left:3px solid var(–red);}
+.at-sym{font-family:‘Orbitron’,monospace;font-weight:700;font-size:12px;}
+.at-sym.long{color:var(–green);}.at-sym.short{color:var(–red);}
+.at-info{font-size:10px;color:var(–text2);line-height:1.7;}
+.at-pnl{font-family:‘Orbitron’,monospace;font-weight:700;font-size:14px;text-align:right;}
+.at-pnl.pos{color:var(–green);}.at-pnl.neg{color:var(–red);}
+.close-trade-btn{font-size:9px;padding:5px 10px;border:1px solid var(–border2);background:transparent;color:var(–text2);cursor:pointer;font-family:‘Space Mono’,monospace;letter-spacing:1px;}
+.close-trade-btn:hover{border-color:var(–red);color:var(–red);}
+
+/* TRADE HISTORY */
+.trade-row{display:grid;grid-template-columns:80px 90px 70px 80px 80px 80px 1fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(–border);font-size:10px;align-items:center;}
+.trade-row.header{background:var(–surface2);font-size:8px;letter-spacing:2px;color:var(–text2);}
+.trade-row.win{border-left:2px solid var(–green);}
+.trade-row.loss{border-left:2px solid var(–red);}
+.trade-row.open{border-left:2px solid var(–yellow);}
+.pnl-pos{color:var(–green);font-weight:700;}
+.pnl-neg{color:var(–red);font-weight:700;}
+
+/* CHART EQUITY */
+#equityChart{width:100%;height:140px;border:1px solid var(–border2);background:var(–surface);margin-bottom:14px;position:relative;overflow:hidden;}
+#equityCanvas{width:100%;height:100%;}
+.chart-label{position:absolute;top:8px;left:12px;font-size:9px;letter-spacing:2px;color:var(–text2);}
+.chart-val{position:absolute;top:8px;right:12px;font-family:‘Orbitron’,monospace;font-size:11px;}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(–border);border:1px solid var(–border2);margin-bottom:14px;}
+.stat-cell{background:var(–surface);padding:12px;text-align:center;}
+.stat-l{font-size:8px;letter-spacing:2px;color:var(–text2);margin-bottom:5px;}
+.stat-v{font-family:‘Orbitron’,monospace;font-weight:700;font-size:14px;}
+.sv-g{color:var(–green);}.sv-r{color:var(–red);}.sv-y{color:var(–yellow);}.sv-p{color:var(–purple);}.sv-a{color:var(–accent);}
+
+/* LOG */
+#logBox{border:1px solid var(–border2);background:var(–surface);padding:0;max-height:200px;overflow-y:auto;}
+.log-entry{padding:6px 12px;border-bottom:1px solid var(–border);font-size:10px;display:flex;gap:10px;align-items:flex-start;}
+.log-time{color:var(–text3);flex-shrink:0;font-size:9px;}
+.log-msg{flex:1;line-height:1.5;}
+.log-msg.info{color:var(–text2);}
+.log-msg.buy{color:var(–green);}
+.log-msg.sell{color:var(–red);}
+.log-msg.win{color:var(–green);font-weight:700;}
+.log-msg.loss{color:var(–red);font-weight:700;}
+.log-msg.warn{color:var(–yellow);}
+
+@media(max-width:600px){
+.balance-panel{grid-template-columns:1fr 1fr;}
+.stats-grid{grid-template-columns:1fr 1fr;}
+.trade-row{grid-template-columns:60px 70px 55px 65px 65px 65px 1fr;font-size:9px;}
+.active-trade{grid-template-columns:auto 1fr auto;}
+.close-trade-btn{grid-column:1/-1;width:100%;}
+}
+</style>
+
+</head>
+<body>
+<div class="bg"><div class="bg-grid"></div></div>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="logo">PAPER TRADING BOT</div>
+    <div class="logo-sub">ВИРТУАЛЬНЫЕ СДЕЛКИ · РЕАЛЬНЫЕ ЦЕНЫ BINANCE · СТАТИСТИКА</div>
+  </div>
+  <div class="hdr-right">
+    <span style="font-size:10px;color:var(--text2)" id="clock">--:--:--</span>
+    <div class="live"><div class="pdot"></div>BINANCE</div>
+  </div>
+</header>
+
+<!-- BALANCE -->
+
+<div class="balance-panel">
+  <div class="bal-cell">
+    <div class="bal-label">БАЛАНС</div>
+    <div class="bal-value sv-a" id="balTotal">$100.00</div>
+    <div class="bal-sub" id="balChange">+$0.00 (0%)</div>
+  </div>
+  <div class="bal-cell">
+    <div class="bal-label">СВОБОДНО</div>
+    <div class="bal-value sv-g" id="balFree">$100.00</div>
+    <div class="bal-sub" id="balInTrades">В сделках: $0</div>
+  </div>
+  <div class="bal-cell">
+    <div class="bal-label">ОТКРЫТЫХ</div>
+    <div class="bal-value sv-y" id="openCount">0</div>
+    <div class="bal-sub">сделок</div>
+  </div>
+  <div class="bal-cell">
+    <div class="bal-label">НЕРЕАЛИЗ. PnL</div>
+    <div class="bal-value" id="unrealPnl">$0.00</div>
+    <div class="bal-sub" id="unrealPct">0%</div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+
+<div class="settings-row">
+  <div class="setting-box">
+    <div class="setting-label">СТАРТОВЫЙ БАЛАНС ($)</div>
+    <input class="setting-input" id="startBalance" type="number" value="100" min="10" max="100000">
+  </div>
+  <div class="setting-box">
+    <div class="setting-label">РИСК НА СДЕЛКУ (%)</div>
+    <input class="setting-input" id="riskPct" type="number" value="2" min="0.5" max="10" step="0.5">
+  </div>
+  <div class="setting-box">
+    <div class="setting-label">МАКС. СДЕЛОК</div>
+    <input class="setting-input" id="maxTrades" type="number" value="3" min="1" max="10">
+  </div>
+  <div class="setting-box">
+    <div class="setting-label">ИНТЕРВАЛ СКАНА</div>
+    <select class="setting-input" id="scanInterval">
+      <option value="60000">1 мин</option>
+      <option value="180000" selected>3 мин</option>
+      <option value="300000">5 мин</option>
+      <option value="900000">15 мин</option>
+    </select>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+
+<div class="bot-controls triple">
+  <button class="ctrl-btn start" id="startBtn" onclick="startBot()">▶ ЗАПУСТИТЬ</button>
+  <button class="ctrl-btn stop" id="stopBtn" onclick="stopBot()" disabled>■ ОСТАНОВИТЬ</button>
+  <button class="ctrl-btn reset" onclick="resetBot()">↺ СБРОС</button>
+</div>
+
+<!-- STATUS -->
+
+<div id="botStatus">
+  <div class="status-dot stopped" id="statusDot"></div>
+  <span id="statusText">Бот остановлен. Нажми ЗАПУСТИТЬ чтобы начать.</span>
+</div>
+
+<!-- EQUITY CHART -->
+
+<div id="equityChart">
+  <div class="chart-label">EQUITY CURVE</div>
+  <div class="chart-val" id="chartVal">$100.00</div>
+  <canvas id="equityCanvas"></canvas>
+</div>
+
+<!-- STATS -->
+
+<div class="stats-grid">
+  <div class="stat-cell"><div class="stat-l">ВСЕГО СДЕЛОК</div><div class="stat-v sv-a" id="stTotal">0</div></div>
+  <div class="stat-cell"><div class="stat-l">WINRATE</div><div class="stat-v sv-p" id="stWR">—</div></div>
+  <div class="stat-cell"><div class="stat-l">ПРИБЫЛЬ</div><div class="stat-v sv-g" id="stProfit">$0.00</div></div>
+  <div class="stat-cell"><div class="stat-l">УБЫТОК</div><div class="stat-v sv-r" id="stLoss">$0.00</div></div>
+  <div class="stat-cell"><div class="stat-l">ЛУЧШАЯ</div><div class="stat-v sv-g" id="stBest">—</div></div>
+  <div class="stat-cell"><div class="stat-l">ХУДШАЯ</div><div class="stat-v sv-r" id="stWorst">—</div></div>
+  <div class="stat-cell"><div class="stat-l">СРЕДНИЙ R:R</div><div class="stat-v sv-y" id="stRR">—</div></div>
+  <div class="stat-cell"><div class="stat-l">PROFIT FACTOR</div><div class="stat-v sv-p" id="stPF">—</div></div>
+</div>
+
+<!-- ACTIVE TRADES -->
+
+<div class="sec-label" id="activeLabel" style="display:none">ОТКРЫТЫЕ ПОЗИЦИИ</div>
+<div id="activeTrades"></div>
+
+<!-- HISTORY -->
+
+<div class="sec-label">ИСТОРИЯ СДЕЛОК</div>
+<div style="border:1px solid var(--border2);background:var(--surface);margin-bottom:14px;overflow-x:auto;">
+  <div class="trade-row header">
+    <span>ПАРА</span><span>ТИП</span><span>ВХОД</span><span>ВЫХОД</span><span>PnL $</span><span>PnL %</span><span>ПРИЧИНА</span>
+  </div>
+  <div id="tradeHistory"></div>
+</div>
+
+<!-- LOG -->
+
+<div class="sec-label">ЖУРНАЛ БОТА</div>
+<div id="logBox"></div>
+
+</div>
+<script>
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let botRunning = false;
+let botTimer   = null;
+let scanTimer  = null;
+let priceTimer = null;
+
+let state = loadState();
+
+function defaultState(){
+return{
+balance: 100,
+startBalance: 100,
+trades: [],        // закрытые
+openTrades: [],    // открытые
+equityHistory: [100],
+log: [],
+totalScans: 0,
+};
+}
+
+function loadState(){
+try{
+const s=localStorage.getItem(‘paperTrading’);
+return s?JSON.parse(s):defaultState();
+}catch(e){return defaultState();}
+}
+function saveState(){
+try{localStorage.setItem(‘paperTrading’,JSON.stringify(state));}catch(e){}
+}
+
+// ════════════════════════════════════════
+//  BINANCE PRICES
+// ════════════════════════════════════════
+const HOSTS=[‘https://api.binance.com’,‘https://data.binance.com’];
+
+async function getPrice(symbol){
+for(const h of HOSTS){
+try{
+const r=await fetch(`${h}/api/v3/ticker/price?symbol=${symbol}`);
+if(!r.ok)continue;
+const d=await r.json();
+return +d.price;
+}catch(e){}
+}
+return null;
+}
+
+async function getCandles(symbol,interval=‘1h’,limit=200){
+for(const h of HOSTS){
+try{
+const r=await fetch(`${h}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+if(!r.ok)continue;
+const d=await r.json();
+if(!Array.isArray(d)||!d.length)continue;
+return d.map(c=>({open:+c[1],high:+c[2],low:+c[3],close:+c[4],volume:+c[5]}));
+}catch(e){}
+}
+return null;
+}
+
+// ════════════════════════════════════════
+//  SIGNAL ENGINE (упрощённый SMC+индикаторы)
+// ════════════════════════════════════════
+const COINS=[
+‘BTCUSDT’,‘ETHUSDT’,‘SOLUSDT’,‘XRPUSDT’,‘BNBUSDT’,
+‘AVAXUSDT’,‘LINKUSDT’,‘DOTUSDT’,‘NEARUSDT’,‘ADAUSDT’,
+‘ARBUSDT’,‘OPUSDT’,‘INJUSDT’,‘SUIUSDT’,‘APTUSDT’,
+];
+
+function calcEMA(cl,p){const k=2/(p+1);let e=cl[0];for(let i=1;i<cl.length;i++)e=cl[i]*k+e*(1-k);return e;}
+function calcRSI(cl,p=14){
+let g=0,l=0;
+for(let i=1;i<=p;i++){const d=cl[i]-cl[i-1];d>0?g+=d:l-=d;}
+let ag=g/p,al=l/p;
+for(let i=p+1;i<cl.length;i++){const d=cl[i]-cl[i-1];ag=(ag*(p-1)+Math.max(d,0))/p;al=(al*(p-1)+Math.max(-d,0))/p;}
+return al===0?100:100-100/(1+ag/al);
+}
+function calcATR(c,p=14){
+const trs=[];
+for(let i=1;i<c.length;i++)trs.push(Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close)));
+const sl=trs.slice(-p);
+return sl.reduce((a,b)=>a+b,0)/sl.length;
+}
+function calcMACD(cl){
+const k12=2/13,k26=2/27,k9=2/10;
+let e12=cl[0],e26=cl[0],ms=[];
+for(let i=1;i<cl.length;i++){e12=cl[i]*k12+e12*(1-k12);e26=cl[i]*k26+e26*(1-k26);ms.push(e12-e26);}
+let sig=ms[0];for(let i=1;i<ms.length;i++)sig=ms[i]*k9+sig*(1-k9);
+return{hist:ms[ms.length-1]-sig,macd:ms[ms.length-1],signal:sig};
+}
+function findFVG(c){
+const fvgs=[];
+for(let i=1;i<c.length-1;i++){
+if(c[i-1].high<c[i+1].low)fvgs.push({type:‘bull’,top:c[i+1].low,bottom:c[i-1].high,mid:(c[i+1].low+c[i-1].high)/2});
+if(c[i-1].low>c[i+1].high)fvgs.push({type:‘bear’,top:c[i-1].low,bottom:c[i+1].high,mid:(c[i-1].low+c[i+1].high)/2});
+}
+return fvgs.slice(-10);
+}
+function findOrderBlocks(c){
+const obs=[];
+for(let i=2;i<c.length-3;i++){
+if(c[i].close<c[i].open){
+const up=c.slice(i+1,i+4).filter(x=>x.close>x.open&&(x.close-x.open)/x.open>0.003).length;
+if(up>=2)obs.push({type:‘bull’,high:c[i].high,low:c[i].low,mid:(c[i].high+c[i].low)/2});
+}
+if(c[i].close>c[i].open){
+const dn=c.slice(i+1,i+4).filter(x=>x.close<x.open&&(x.open-x.close)/x.open>0.003).length;
+if(dn>=2)obs.push({type:‘bear’,high:c[i].high,low:c[i].low,mid:(c[i].high+c[i].low)/2});
+}
+}
+return obs.slice(-8);
+}
+
+async function generateSignal(symbol){
+const c1h=await getCandles(symbol,‘1h’,200);
+const c4h=await getCandles(symbol,‘4h’,150);
+const c1d=await getCandles(symbol,‘1d’,100);
+if(!c1h||!c4h||!c1d)return null;
+
+const cl1=c1h.map(c=>c.close);
+const cl4=c4h.map(c=>c.close);
+const cld=c1d.map(c=>c.close);
+const price=cl1[cl1.length-1];
+
+const rsi1=calcRSI(cl1);
+const rsi4=calcRSI(cl4);
+const m1=calcMACD(cl1);
+const e50=calcEMA(cl1,50),e200=calcEMA(cl1,200);
+const e50d=calcEMA(cld,50),e200d=calcEMA(cld,200);
+const atr=calcATR(c1h,14);
+const fvgs=findFVG(c1h);
+const obs=findOrderBlocks(c1h);
+
+// Дневной тренд
+const dailyBull=cld[cld.length-1]>e50d&&e50d>e200d;
+const dailyBear=cld[cld.length-1]<e50d&&e50d<e200d;
+
+let b=0,br=0,reasons=[];
+if(rsi1<38){b+=2;reasons.push(‘RSI перепродан’);}else if(rsi1>62){br+=2;reasons.push(‘RSI перекуплен’);}
+if(m1.hist>0&&m1.macd>m1.signal){b+=2;reasons.push(‘MACD бычий’);}else if(m1.hist<0&&m1.macd<m1.signal){br+=2;reasons.push(‘MACD медвежий’);}
+if(e50>e200){b+=2;reasons.push(‘EMA бычий крест’);}else{br+=2;reasons.push(‘EMA медвежий крест’);}
+if(price>e50){b+=1;}else{br+=1;}
+if(rsi4<50&&calcMACD(cl4).hist>0){b+=1;}else if(rsi4>50&&calcMACD(cl4).hist<0){br+=1;}
+
+// FVG рядом с ценой
+const nearBullFVG=fvgs.find(f=>f.type===‘bull’&&price>=f.bottom*0.998&&price<=f.top*1.003);
+const nearBearFVG=fvgs.find(f=>f.type===‘bear’&&price<=f.top*1.002&&price>=f.bottom*0.997);
+if(nearBullFVG){b+=2;reasons.push(‘FVG бычий’);}
+if(nearBearFVG){br+=2;reasons.push(‘FVG медвежий’);}
+
+// OB рядом
+const bullOB=obs.find(o=>o.type===‘bull’&&price>=o.low*0.999&&price<=o.high*1.01);
+const bearOB=obs.find(o=>o.type===‘bear’&&price<=o.high*1.001&&price>=o.low*0.99);
+if(bullOB){b+=2;reasons.push(‘Order Block бычий’);}
+if(bearOB){br+=2;reasons.push(‘Order Block медвежий’);}
+
+// Daily фильтр
+if(dailyBull)b+=2;else if(dailyBear)br+=2;
+
+const diff=b-br;
+if(Math.abs(diff)<4)return null;
+const dir=diff>0?‘long’:‘short’;
+if(dir===‘long’&&dailyBear)return null;
+if(dir===‘short’&&dailyBull)return null;
+
+const atrMult=2.0;
+let entry,sl,tp1,tp2,tp3;
+if(dir===‘long’){
+entry=+(price*1.0005).toFixed(6);
+sl=+(entry-atr*atrMult).toFixed(6);
+tp1=+(entry+atr*1.5).toFixed(6);
+tp2=+(entry+atr*3.0).toFixed(6);
+tp3=+(entry+atr*5.0).toFixed(6);
+}else{
+entry=+(price*0.9995).toFixed(6);
+sl=+(entry+atr*atrMult).toFixed(6);
+tp1=+(entry-atr*1.5).toFixed(6);
+tp2=+(entry-atr*3.0).toFixed(6);
+tp3=+(entry-atr*5.0).toFixed(6);
+}
+const rr=+(Math.abs(entry-tp2)/Math.max(Math.abs(entry-sl),1e-9)).toFixed(2);
+if(rr<1.5)return null;
+
+const prob=Math.round(((dir===‘long’?b:br)/Math.max(b+br,1))*100);
+return{symbol,dir,entry,sl,tp1,tp2,tp3,rr,price,atr,reasons,prob};
+}
+
+// ════════════════════════════════════════
+//  BOT LOGIC
+// ════════════════════════════════════════
+function calcPositionSize(entryPrice, slPrice){
+const riskPct=+(document.getElementById(‘riskPct’).value)||2;
+const riskAmount=state.balance*(riskPct/100);
+const slDistance=Math.abs(entryPrice-slPrice);
+if(slDistance===0)return 0;
+// Размер позиции в USD
+const posSize=riskAmount/slDistance*entryPrice;
+return Math.min(posSize, state.balance*0.95); // не более 95% баланса
+}
+
+async function runScan(){
+if(!botRunning)return;
+setStatus(‘scanning’,‘🔍 Сканирование рынка…’);
+const maxTrades=+(document.getElementById(‘maxTrades’).value)||3;
+
+// Обновить цены открытых сделок
+await updateOpenTrades();
+
+// Ищем новые сигналы если есть место
+if(state.openTrades.length<maxTrades){
+const alreadyTrading=state.openTrades.map(t=>t.symbol);
+const candidates=COINS.filter(c=>!alreadyTrading.includes(c));
+// Проверяем по 3 монеты рандомно чтобы не перегружать
+const batch=candidates.sort(()=>Math.random()-0.5).slice(0,5);
+
+```
+for(const sym of batch){
+  if(!botRunning)break;
+  if(state.openTrades.length>=maxTrades)break;
+  try{
+    const sig=await generateSignal(sym);
+    if(sig){
+      openTrade(sig);
+      await sleep(500);
+    }
+  }catch(e){}
+  await sleep(300);
+}
+```
+
+}
+
+state.totalScans++;
+saveState();
+renderAll();
+setStatus(‘running’,`✅ Сканирование завершено · Открытых: ${state.openTrades.length} · Всего сделок: ${state.trades.length}`);
+}
+
+async function updateOpenTrades(){
+for(const trade of […state.openTrades]){
+const price=await getPrice(trade.symbol);
+if(!price)continue;
+trade.currentPrice=price;
+trade.pnl=calcTradePnL(trade,price);
+
+```
+// Проверяем SL и TP
+if(trade.dir==='long'){
+  if(price<=trade.sl){ closeTrade(trade.id,'sl',price); continue; }
+  if(price>=trade.tp2){ closeTrade(trade.id,'tp2',price); continue; }
+  if(price>=trade.tp1&&!trade.tp1Hit){ trade.tp1Hit=true; addLog(`🎯 TP1 достигнут: ${trade.symbol} @ $${fmt(price)}`,'win'); }
+} else {
+  if(price>=trade.sl){ closeTrade(trade.id,'sl',price); continue; }
+  if(price<=trade.tp2){ closeTrade(trade.id,'tp2',price); continue; }
+  if(price<=trade.tp1&&!trade.tp1Hit){ trade.tp1Hit=true; addLog(`🎯 TP1 достигнут: ${trade.symbol} @ $${fmt(price)}`,'win'); }
+}
+await sleep(150);
+```
+
+}
+}
+
+function calcTradePnL(trade,currentPrice){
+const priceDiff=trade.dir===‘long’?currentPrice-trade.entry:trade.entry-currentPrice;
+return +(trade.posSize*(priceDiff/trade.entry)).toFixed(2);
+}
+
+function openTrade(sig){
+const posSize=calcPositionSize(sig.entry,sig.sl);
+if(posSize<1)return;
+if(posSize>state.balance*0.95)return;
+
+const id=Date.now()+’_’+sig.symbol;
+const trade={
+id, symbol:sig.symbol, dir:sig.dir,
+entry:sig.entry, sl:sig.sl,
+tp1:sig.tp1, tp2:sig.tp2, tp3:sig.tp3,
+rr:sig.rr, prob:sig.prob,
+posSize:+posSize.toFixed(2),
+openTime:new Date().toLocaleTimeString(‘ru-RU’),
+openDate:new Date().toLocaleDateString(‘ru-RU’),
+reasons:sig.reasons,
+currentPrice:sig.entry, pnl:0, tp1Hit:false
+};
+state.openTrades.push(trade);
+state.balance-=posSize*0.001; // имитация комиссии 0.1%
+addLog(`📈 ОТКРЫТ ${sig.dir.toUpperCase()} ${sig.symbol} @ $${fmt(sig.entry)} · Размер: $${fmt(posSize)} · SL: $${fmt(sig.sl)} · TP2: $${fmt(sig.tp2)} · Причины: ${sig.reasons.slice(0,2).join(', ')}`,sig.dir===‘long’?‘buy’:‘sell’);
+}
+
+function closeTrade(id,reason,exitPrice){
+const idx=state.openTrades.findIndex(t=>t.id===id);
+if(idx===-1)return;
+const trade=state.openTrades[idx];
+const pnl=calcTradePnL(trade,exitPrice);
+const pnlPct=+((pnl/trade.posSize)*100).toFixed(2);
+const isWin=pnl>0;
+
+state.balance=+(state.balance+trade.posSize+pnl-trade.posSize*0.001).toFixed(2);
+state.openTrades.splice(idx,1);
+
+const closed={…trade,exitPrice:+exitPrice.toFixed(6),pnl:+pnl.toFixed(2),pnlPct,reason,closeTime:new Date().toLocaleTimeString(‘ru-RU’),isWin};
+state.trades.unshift(closed);
+state.equityHistory.push(+state.balance.toFixed(2));
+if(state.equityHistory.length>200)state.equityHistory.shift();
+
+const emoji=reason===‘sl’?‘🛑’:reason.startsWith(‘tp’)?‘🎯’:‘✖’;
+const tag=isWin?‘win’:‘loss’;
+addLog(`${emoji} ЗАКРЫТ ${trade.dir.toUpperCase()} ${trade.symbol} · Выход: $${fmt(exitPrice)} · PnL: ${pnl>=0?'+':''}$${fmt(pnl)} (${pnlPct>=0?'+':''}${pnlPct}%) · ${reason.toUpperCase()}`,tag);
+}
+
+function closeTradeManual(id){
+const trade=state.openTrades.find(t=>t.id===id);
+if(!trade)return;
+getPrice(trade.symbol).then(price=>{
+if(price)closeTrade(id,‘manual’,price);
+else closeTrade(id,‘manual’,trade.currentPrice||trade.entry);
+saveState();renderAll();
+});
+}
+
+// ════════════════════════════════════════
+//  BOT CONTROLS
+// ════════════════════════════════════════
+function startBot(){
+const startBal=+(document.getElementById(‘startBalance’).value)||100;
+if(state.trades.length===0&&state.openTrades.length===0){
+state.balance=startBal;
+state.startBalance=startBal;
+state.equityHistory=[startBal];
+}
+botRunning=true;
+document.getElementById(‘startBtn’).disabled=true;
+document.getElementById(‘stopBtn’).disabled=false;
+document.getElementById(‘startBtn’).classList.add(‘active’);
+addLog(‘🤖 Бот запущен. Сканирование рынка…’,‘info’);
+setStatus(‘running’,‘🤖 Бот запущен’);
+runScan();
+const interval=+(document.getElementById(‘scanInterval’).value)||180000;
+botTimer=setInterval(runScan,interval);
+// Обновляем цены каждые 30 секунд
+priceTimer=setInterval(async()=>{
+if(state.openTrades.length>0){
+await updateOpenTrades();
+saveState();renderAll();
+}
+},30000);
+saveState();renderAll();
+}
+
+function stopBot(){
+botRunning=false;
+clearInterval(botTimer);clearInterval(priceTimer);
+botTimer=null;priceTimer=null;
+document.getElementById(‘startBtn’).disabled=false;
+document.getElementById(‘stopBtn’).disabled=true;
+document.getElementById(‘startBtn’).classList.remove(‘active’);
+setStatus(‘stopped’,‘⏹ Бот остановлен’);
+addLog(‘⏹ Бот остановлен’,‘warn’);
+saveState();renderAll();
+}
+
+function resetBot(){
+if(!confirm(‘Сбросить всю статистику и начать заново?’))return;
+stopBot();
+state=defaultState();
+const startBal=+(document.getElementById(‘startBalance’).value)||100;
+state.balance=startBal;state.startBalance=startBal;state.equityHistory=[startBal];
+saveState();renderAll();
+addLog(‘↺ Бот сброшен. Баланс восстановлен.’,‘warn’);
+}
+
+function setStatus(type,text){
+const dot=document.getElementById(‘statusDot’);
+dot.className=’status-dot ’+type;
+document.getElementById(‘statusText’).textContent=text;
+}
+
+// ════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════
+const fmt=n=>{
+if(n===undefined||n===null||isNaN(n))return’0’;
+const num=+n;
+if(Math.abs(num)>=1000)return num.toLocaleString(‘en-US’,{maximumFractionDigits:2});
+if(Math.abs(num)>=1)return num.toLocaleString(‘en-US’,{maximumFractionDigits:4});
+return num.toLocaleString(‘en-US’,{maximumFractionDigits:6});
+};
+
+function renderAll(){
+renderBalance();
+renderStats();
+renderActiveTrades();
+renderHistory();
+renderChart();
+}
+
+function renderBalance(){
+const totalPnl=state.openTrades.reduce((s,t)=>s+(t.pnl||0),0);
+const totalBalance=state.balance+totalPnl;
+const change=totalBalance-state.startBalance;
+const changePct=+(change/state.startBalance*100).toFixed(2);
+const inTrades=state.openTrades.reduce((s,t)=>s+t.posSize,0);
+
+document.getElementById(‘balTotal’).textContent=’$’+fmt(totalBalance);
+document.getElementById(‘balTotal’).className=‘bal-value ‘+(change>=0?‘sv-g’:‘sv-r’);
+document.getElementById(‘balChange’).textContent=`${change>=0?'+':''} $${fmt(change)} (${changePct>=0?'+':''}${changePct}%)`;
+document.getElementById(‘balChange’).style.color=change>=0?‘var(–green)’:‘var(–red)’;
+document.getElementById(‘balFree’).textContent=’$’+fmt(state.balance);
+document.getElementById(‘balInTrades’).textContent=‘В сделках: $’+fmt(inTrades);
+document.getElementById(‘openCount’).textContent=state.openTrades.length;
+document.getElementById(‘unrealPnl’).textContent=(totalPnl>=0?’+’:’’)+’ $’+fmt(totalPnl);
+document.getElementById(‘unrealPnl’).className=‘bal-value ‘+(totalPnl>=0?‘sv-g’:‘sv-r’);
+document.getElementById(‘unrealPct’).textContent=state.startBalance?+(totalPnl/state.startBalance*100).toFixed(2)+’%’:‘0%’;
+document.getElementById(‘chartVal’).textContent=’$’+fmt(totalBalance);
+document.getElementById(‘chartVal’).style.color=change>=0?‘var(–green)’:‘var(–red)’;
+}
+
+function renderStats(){
+const t=state.trades;
+if(!t.length){
+[‘stTotal’,‘stWR’,‘stProfit’,‘stLoss’,‘stBest’,‘stWorst’,‘stRR’,‘stPF’].forEach(id=>{
+document.getElementById(id).textContent=id===‘stTotal’?‘0’:’—’;
+});
+return;
+}
+const wins=t.filter(x=>x.isWin);
+const losses=t.filter(x=>!x.isWin);
+const totalProfit=wins.reduce((s,x)=>s+x.pnl,0);
+const totalLoss=Math.abs(losses.reduce((s,x)=>s+x.pnl,0));
+const wr=Math.round(wins.length/t.length*100);
+const best=Math.max(…t.map(x=>x.pnl));
+const worst=Math.min(…t.map(x=>x.pnl));
+const avgRR=t.length?+(t.reduce((s,x)=>s+(x.rr||0),0)/t.length).toFixed(2):0;
+const pf=totalLoss>0?+(totalProfit/totalLoss).toFixed(2):totalProfit>0?‘∞’:’—’;
+
+document.getElementById(‘stTotal’).textContent=t.length;
+document.getElementById(‘stWR’).textContent=wr+’%’;
+document.getElementById(‘stWR’).className=‘stat-v ‘+(wr>=55?‘sv-g’:wr>=45?‘sv-y’:‘sv-r’);
+document.getElementById(‘stProfit’).textContent=’+$’+fmt(totalProfit);
+document.getElementById(‘stLoss’).textContent=’-$’+fmt(totalLoss);
+document.getElementById(‘stBest’).textContent=’+$’+fmt(best);
+document.getElementById(‘stWorst’).textContent=’$’+fmt(worst);
+document.getElementById(‘stRR’).textContent=‘1:’+avgRR;
+document.getElementById(‘stPF’).textContent=pf;
+document.getElementById(‘stPF’).className=’stat-v ’+(+pf>=1.5?‘sv-g’:+pf>=1?‘sv-y’:‘sv-r’);
+}
+
+function renderActiveTrades(){
+const box=document.getElementById(‘activeTrades’);
+const label=document.getElementById(‘activeLabel’);
+if(!state.openTrades.length){label.style.display=‘none’;box.innerHTML=’’;return;}
+label.style.display=‘flex’;
+box.innerHTML=state.openTrades.map(t=>` <div class="active-trade ${t.dir}-t"> <div class="at-sym ${t.dir}">${t.dir==='long'?'📈':'📉'} ${t.symbol.replace('USDT','')}</div> <div class="at-info"> Вход: $${fmt(t.entry)} · Тек: $${fmt(t.currentPrice||t.entry)}<br> SL: $${fmt(t.sl)} · TP2: $${fmt(t.tp2)} · R:R ${t.rr}<br> Размер: $${fmt(t.posSize)} · ${t.openDate} ${t.openTime} </div> <div class="at-pnl ${(t.pnl||0)>=0?'pos':'neg'}">${(t.pnl||0)>=0?'+':''} $${fmt(t.pnl||0)}</div> <button class="close-trade-btn" onclick="closeTradeManual('${t.id}');event.stopPropagation()">✕ ЗАКРЫТЬ</button> </div>`).join(’’);
+}
+
+function renderHistory(){
+const box=document.getElementById(‘tradeHistory’);
+if(!state.trades.length){box.innerHTML=’<div style="padding:16px;text-align:center;font-size:10px;color:var(--text2)">Сделок пока нет</div>’;return;}
+box.innerHTML=state.trades.slice(0,50).map(t=>` <div class="trade-row ${t.isWin?'win':'loss'}"> <span style="color:${t.dir==='long'?'var(--green)':'var(--red)'};font-weight:700">${t.dir==='long'?'▲':'▼'} ${t.symbol.replace('USDT','')}</span> <span style="color:var(--text2)">${t.dir.toUpperCase()}</span> <span>$${fmt(t.entry)}</span> <span>$${fmt(t.exitPrice)}</span> <span class="${t.pnl>=0?'pnl-pos':'pnl-neg'}">${t.pnl>=0?'+':''}$${fmt(t.pnl)}</span> <span class="${t.pnlPct>=0?'pnl-pos':'pnl-neg'}">${t.pnlPct>=0?'+':''}${t.pnlPct}%</span> <span style="color:var(--text2);font-size:9px">${t.reason==='sl'?'🛑 SL':t.reason==='tp2'?'🎯 TP2':'✖ ручной'} ${t.closeTime}</span> </div>`).join(’’);
+}
+
+function renderChart(){
+const canvas=document.getElementById(‘equityCanvas’);
+const ctx=canvas.getContext(‘2d’);
+const data=state.equityHistory;
+if(data.length<2)return;
+
+canvas.width=canvas.offsetWidth;
+canvas.height=canvas.offsetHeight;
+const W=canvas.width, H=canvas.height;
+const pad=10;
+
+const min=Math.min(…data)*0.999;
+const max=Math.max(…data)*1.001;
+const range=max-min||1;
+
+const x=i=>pad+(i/(data.length-1))*(W-2*pad);
+const y=v=>H-pad-(v-min)/range*(H-2*pad);
+
+ctx.clearRect(0,0,W,H);
+
+// Grid lines
+ctx.strokeStyle=‘rgba(26,53,80,.5)’;ctx.lineWidth=1;
+ctx.setLineDash([2,4]);
+for(let i=0;i<=4;i++){const yy=pad+i*(H-2*pad)/4;ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W,yy);ctx.stroke();}
+ctx.setLineDash([]);
+
+// Area fill
+const startBal=data[0];
+const lastBal=data[data.length-1];
+const isProfit=lastBal>=startBal;
+const color=isProfit?‘rgba(0,255,136,’:‘rgba(255,45,85,’;
+
+ctx.beginPath();
+ctx.moveTo(x(0),y(data[0]));
+data.forEach((v,i)=>{if(i>0)ctx.lineTo(x(i),y(v));});
+ctx.lineTo(x(data.length-1),H);
+ctx.lineTo(x(0),H);
+ctx.closePath();
+ctx.fillStyle=color+‘0.05)’;
+ctx.fill();
+
+// Line
+ctx.beginPath();
+ctx.strokeStyle=color+‘0.8)’;
+ctx.lineWidth=2;
+ctx.moveTo(x(0),y(data[0]));
+data.forEach((v,i)=>{if(i>0)ctx.lineTo(x(i),y(v));});
+ctx.stroke();
+
+// Baseline
+ctx.beginPath();
+ctx.strokeStyle=‘rgba(80,96,112,.5)’;
+ctx.lineWidth=1;ctx.setLineDash([4,4]);
+ctx.moveTo(0,y(startBal));ctx.lineTo(W,y(startBal));
+ctx.stroke();ctx.setLineDash([]);
+}
+
+// ════════════════════════════════════════
+//  LOG
+// ════════════════════════════════════════
+function addLog(msg,type=‘info’){
+const now=new Date().toLocaleTimeString(‘ru-RU’);
+state.log.unshift({msg,type,time:now});
+if(state.log.length>100)state.log.pop();
+renderLog();
+}
+function renderLog(){
+const box=document.getElementById(‘logBox’);
+box.innerHTML=state.log.slice(0,30).map(l=>` <div class="log-entry"> <span class="log-time">${l.time}</span> <span class="log-msg ${l.type}">${l.msg}</span> </div>`).join(’’);
+}
+
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+setInterval(()=>{document.getElementById(‘clock’).textContent=new Date().toLocaleTimeString(‘ru-RU’);},1000);
+window.addEventListener(‘resize’,renderChart);
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+// Синхронизируем UI с сохранённым состоянием
+document.getElementById(‘startBalance’).value=state.startBalance||100;
+renderAll();
+renderLog();
+if(state.log.length===0)addLog(‘👋 Добро пожаловать в Paper Trading Bot! Настрой параметры и нажми ЗАПУСТИТЬ.’,‘info’);
+</script>
+
+</body>
+</html>
