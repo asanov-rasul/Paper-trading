@@ -466,20 +466,18 @@ const candidates=COINS.filter(c=>!alreadyTrading.includes(c));
 // Проверяем по 3 монеты рандомно чтобы не перегружать
 const batch=candidates.sort(()=>Math.random()-0.5).slice(0,5);
 
-```
 for(const sym of batch){
-  if(!botRunning)break;
-  if(state.openTrades.length>=maxTrades)break;
-  try{
-    const sig=await generateSignal(sym);
-    if(sig){
-      openTrade(sig);
-      await sleep(500);
-    }
-  }catch(e){}
-  await sleep(300);
+if(!botRunning)break;
+if(state.openTrades.length>=maxTrades)break;
+try{
+const sig=await generateSignal(sym);
+if(sig){
+openTrade(sig);
+await sleep(500);
 }
-```
+}catch(e){}
+await sleep(300);
+}
 
 }
 
@@ -496,19 +494,17 @@ if(!price)continue;
 trade.currentPrice=price;
 trade.pnl=calcTradePnL(trade,price);
 
-```
 // Проверяем SL и TP
-if(trade.dir==='long'){
-  if(price<=trade.sl){ closeTrade(trade.id,'sl',price); continue; }
-  if(price>=trade.tp2){ closeTrade(trade.id,'tp2',price); continue; }
-  if(price>=trade.tp1&&!trade.tp1Hit){ trade.tp1Hit=true; addLog(`🎯 TP1 достигнут: ${trade.symbol} @ $${fmt(price)}`,'win'); }
+if(trade.dir===‘long’){
+if(price<=trade.sl){ closeTrade(trade.id,‘sl’,price); continue; }
+if(price>=trade.tp2){ closeTrade(trade.id,‘tp2’,price); continue; }
+if(price>=trade.tp1&&!trade.tp1Hit){ trade.tp1Hit=true; addLog(`🎯 TP1 достигнут: ${trade.symbol} @ $${fmt(price)}`,‘win’); }
 } else {
-  if(price>=trade.sl){ closeTrade(trade.id,'sl',price); continue; }
-  if(price<=trade.tp2){ closeTrade(trade.id,'tp2',price); continue; }
-  if(price<=trade.tp1&&!trade.tp1Hit){ trade.tp1Hit=true; addLog(`🎯 TP1 достигнут: ${trade.symbol} @ $${fmt(price)}`,'win'); }
+if(price>=trade.sl){ closeTrade(trade.id,‘sl’,price); continue; }
+if(price<=trade.tp2){ closeTrade(trade.id,‘tp2’,price); continue; }
+if(price<=trade.tp1&&!trade.tp1Hit){ trade.tp1Hit=true; addLog(`🎯 TP1 достигнут: ${trade.symbol} @ $${fmt(price)}`,‘win’); }
 }
 await sleep(150);
-```
 
 }
 }
