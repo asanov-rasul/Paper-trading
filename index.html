@@ -341,9 +341,25 @@ header{padding:20px 0 16px;border-bottom:1px solid var(–border2);margin-bottom
 
 <script>
 // ═══════════════════════════════════
-// STATE
+// STATE + PERSISTENCE
 // ═══════════════════════════════════
-let state = {
+const STORAGE_KEY = 'smc_paper_trader_v1';
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return null;
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+const defaultState = {
   initialBalance: 100,
   balance: 100,
   openPositions: [],
@@ -354,6 +370,8 @@ let state = {
   riskPct: 2,
   autoTrade: false,
 };
+
+let state = Object.assign({}, defaultState, loadState() || {});
 
 let autoScanTimer = null;
 let priceUpdateTimer = null;
@@ -638,6 +656,7 @@ function openTrade(symbol, direction, entry, tp, sl, rr, prob, isAuto) {
   state.openPositions.push({ id, symbol, direction, entry, tp, sl, rr, prob, size: posSize, openTime: Date.now(), currentPrice: entry });
   state.balance -= posSize;
 
+  saveState();
   renderPositions();
   renderBalance();
   showToast(`${isAuto?'🤖 АВТО: ':''}${sym2name(symbol)} ${direction.toUpperCase()} открыт @ $${fmt(entry)}`, 'info');
@@ -668,6 +687,7 @@ function closeTrade(id, reason) {
   });
   state.openPositions.splice(idx, 1);
 
+  saveState();
   renderPositions();
   renderHistory();
   renderBalance();
@@ -699,6 +719,7 @@ async function updatePrices() {
       }
     }
   }
+  saveState();
   renderPositions();
   renderBalance();
 }
@@ -888,6 +909,7 @@ function toggleAutoScan() {
 
 function toggleAutoTrade() {
   state.autoTrade = document.getElementById('autoTrade').checked;
+  saveState();
   showToast(state.autoTrade ? '🤖 Авто-торговля ВКЛЮЧЕНА' : '🤖 Авто-торговля выключена', 'info');
 }
 
@@ -901,6 +923,8 @@ function applyBalance() {
   state.initialBalance = val;
   state.balance = val;
   state.equityHistory = [val];
+  state.riskPct = +document.getElementById('riskPct').value || 2;
+  saveState();
   renderBalance();
   renderEquity();
   showToast(`Баланс установлен: $${val}`, 'info');
@@ -920,6 +944,7 @@ function confirmReset() {
   state.losses = 0;
   state.balance = state.initialBalance;
   state.equityHistory = [state.initialBalance];
+  saveState();
   renderPositions();
   renderHistory();
   renderBalance();
@@ -943,9 +968,15 @@ function showToast(msg, type='info') {
 // ═══════════════════════════════════
 // INIT
 // ═══════════════════════════════════
+// Restore UI inputs from saved state
+document.getElementById('initBalance').value = state.initialBalance;
+document.getElementById('riskPct').value = state.riskPct || 2;
+if(state.autoTrade) document.getElementById('autoTrade').checked = true;
+
 renderBalance();
 renderPositions();
 renderHistory();
+renderEquity();
 
 // Price update every 15s
 priceUpdateTimer = setInterval(updatePrices, 15000);
