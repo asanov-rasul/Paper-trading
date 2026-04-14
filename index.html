@@ -254,67 +254,61 @@ select.setting-input{background:#0c1420 !important;color:#b0c8e0 !important;-web
 // ════════════════════════════════════════
 let botRunning = false;
 let botTimer   = null;
+let scanTimer  = null;
 let priceTimer = null;
 
 let state = loadState();
 
 function defaultState(){
-  return {
-    balance: 100,
-    startBalance: 100,
-    trades: [],        // закрытые сделки
-    openTrades: [],    // открытые сделки
-    equityHistory: [100],
-    log: [],
-    totalScans: 0,
-  };
+return{
+balance: 100,
+startBalance: 100,
+trades: [],        // закрытые
+openTrades: [],    // открытые
+equityHistory: [100],
+log: [],
+totalScans: 0,
+};
 }
 
 function loadState(){
-  try {
-    const s = localStorage.getItem('paperTrading');
-    return s ? JSON.parse(s) : defaultState();
-  } catch(e) {
-    return defaultState();
-  }
+try{
+const s=localStorage.getItem(‘paperTrading’);
+return s?JSON.parse(s):defaultState();
+}catch(e){return defaultState();}
 }
-
 function saveState(){
-  try {
-    localStorage.setItem('paperTrading', JSON.stringify(state));
-  } catch(e) {}
+try{localStorage.setItem(‘paperTrading’,JSON.stringify(state));}catch(e){}
 }
 
 // ════════════════════════════════════════
 //  BINANCE PRICES
 // ════════════════════════════════════════
-const HOSTS = ['https://api.binance.com', 'https://data.binance.com'];
+const HOSTS=[‘https://api.binance.com’,‘https://data.binance.com’];
 
 async function getPrice(symbol){
-  for(const h of HOSTS){
-    try{
-      const r = await fetch(`${h}/api/v3/ticker/price?symbol=${symbol}`);
-      if(!r.ok) continue;
-      const d = await r.json();
-      return +d.price;
-    } catch(e){}
-  }
-  return null;
+for(const h of HOSTS){
+try{
+const r=await fetch(`${h}/api/v3/ticker/price?symbol=${symbol}`);
+if(!r.ok)continue;
+const d=await r.json();
+return +d.price;
+}catch(e){}
+}
+return null;
 }
 
-async function getCandles(symbol, interval='1h', limit=200){
-  for(const h of HOSTS){
-    try{
-      const r = await fetch(`${h}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
-      if(!r.ok) continue;
-      const d = await r.json();
-      if(!Array.isArray(d) || !d.length) continue;
-      return d.map(c => ({
-        open: +c[1], high: +c[2], low: +c[3], close: +c[4], volume: +c[5]
-      }));
-    } catch(e){}
-  }
-  return null;
+async function getCandles(symbol,interval=‘1h’,limit=200){
+for(const h of HOSTS){
+try{
+const r=await fetch(`${h}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+if(!r.ok)continue;
+const d=await r.json();
+if(!Array.isArray(d)||!d.length)continue;
+return d.map(c=>({open:+c[1],high:+c[2],low:+c[3],close:+c[4],volume:+c[5]}));
+}catch(e){}
+}
+return null;
 }
 
 // ════════════════════════════════════════
